@@ -1,0 +1,80 @@
+"My workaround for invisable people, and people in different locations when dead. This solution is automatic.
+I also have an event handler, and have added a menu item in my ambulance job that manually ragdolls nearby dead players"
+
+----------------------------------------------------------------------------------------------------------------------------
+
+Citizen.CreateThread(function()
+    while true do
+        Citizen.Wait(1000)
+        local coords = GetEntityCoords(PlayerPedId())
+        local players = ESX.Game.GetPlayersInArea(coords, 100.0)
+
+        if #players > 0 and isDead then
+            startRagdollWorkaround()
+
+            Citizen.Wait(1000 * 60 * 5) -- cooldown
+        end
+    end
+end)
+
+RegisterNetEvent('adrp_fix:ragdoll')
+AddEventHandler('adrp_fix:ragdoll', function()
+    startRagdollWorkaround()
+end)
+
+function startRagdollWorkaround()
+    local work = true
+    SetTimecycleModifier('hud_def_blur')
+    local players = {}
+
+    for player=0, 255 do
+        if NetworkIsPlayerActive(player) then
+            players[player] = true
+        end
+    end
+
+    Citizen.CreateThread(function()
+        while work do
+            Citizen.Wait(0)
+            drawLoadingText('FIXING YOUR CHARACTER! HOLD YOUR PHONE', 255,255,255,255)
+            DisableAllControlActions(0)
+
+            for k,v in pairs(players) do
+                local targetPed = GetPlayerPed(k)
+
+                SetEntityLocallyInvisible(targetPed)
+                SetEntityNoCollisionEntity(PlayerPedId(), targetPed, true)
+            end
+        end
+    end)
+
+    for i=1, 10 do
+        ClearPedTasksImmediately(PlayerPedId())
+        Citizen.Wait(700)
+    end
+
+    for k,v in pairs(players) do
+        if NetworkIsPlayerActive(k) then
+            SetEntityLocallyVisible(GetPlayerPed(k))
+        end
+    end
+
+    work = false
+    SetTimecycleModifier('default')
+end
+
+function drawLoadingText(text, red, green, blue, alpha)
+    SetTextFont(4)
+    SetTextProportional(0)
+    SetTextScale(1.0, 1.5)
+    SetTextColour(red, green, blue, alpha)
+    SetTextDropShadow(0, 0, 0, 0, 255)
+    SetTextEdge(1, 0, 0, 0, 255)
+    SetTextDropShadow()
+    SetTextOutline()
+    SetTextCentre(true)
+
+    BeginTextCommandDisplayText("STRING")
+    AddTextComponentSubstringPlayerName(text)
+    EndTextCommandDisplayText(0.5, 0.5)
+end
